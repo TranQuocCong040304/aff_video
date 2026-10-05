@@ -1,40 +1,68 @@
-# Auto Video Affiliate — Bước 1-4 hoàn chỉnh
+# 🎬 Auto Video Affiliate
 
-Tool tự động dựng video review affiliate Shopee: chọn sản phẩm → viết script bám ảnh/video thật →
-audio có cảm xúc → ghép video → log lịch sử/hiệu suất.
+Tool tự động dựng video review **Top 5 sản phẩm affiliate Shopee** cho YouTube:
 
-## Kiến trúc 2 provider + 2 giai đoạn
+**chọn sản phẩm → viết script bám ảnh/video thật → audio có cảm xúc → ghép video → log lịch sử & hiệu suất**
 
-- **Groq** (free, rộng — 30 request/phút, ~14.400/ngày): mọi bước chỉ cần text — chọn ngách, lọc
-  keyword, lọc sản phẩm, hook, CTA, metadata.
-- **Gemini** (multimodal, free tier hẹp — 20 request/ngày, 5/phút): CHỈ bước viết lời bình từng
-  sản phẩm, vì đây là bước duy nhất cần "nhìn" ảnh/video thật — 1 video chỉ tốn ~5 request Gemini.
+---
 
-**Giai đoạn 1** (chọn lọc): Ngách → Lọc keyword → Lọc ĐÚNG 5 sản phẩm → dừng lại, xuất link để bạn
-tự lấy ảnh/video chi tiết thật từ Shopee (search-result thumbnail không đủ chi tiết).
-**Giai đoạn 2** (viết script + dựng video): Gemini viết lời bình bám theo TỪNG ảnh cụ thể (không
-chỉ nói chung chung) → audio giọng liền mạch có khoảng lặng theo cảm xúc → ghép video → log DB.
+## 📑 Mục lục
 
-## ⚠️ Rủi ro cần biết trước khi dùng thật
+- [Tính năng chính](#-tính-năng-chính)
+- [Kiến trúc](#-kiến-trúc)
+- [Lưu ý trước khi dùng](#️-lưu-ý-trước-khi-dùng)
+- [Cài đặt](#-cài-đặt)
+- [Giao diện web (Streamlit)](#-giao-diện-web-streamlit)
+- [Chuẩn bị dữ liệu đầu vào](#-chuẩn-bị-dữ-liệu-đầu-vào)
+- [Chạy bằng CLI](#-chạy-bằng-cli)
+- [Kết quả đầu ra](#-kết-quả-đầu-ra)
+- [Log lịch sử & hiệu suất](#-log-lịch-sử--hiệu-suất)
+- [Chỉnh prompt](#️-chỉnh-prompt)
+- [Cấu trúc code](#-cấu-trúc-code)
 
-- **Quota Gemini free tier ~20 request/ngày** → khoảng 4 video/ngày với thiết kế hiện tại. Bật
-  billing tại Google AI Studio nếu cần nhanh hơn (rất rẻ, vài cent/video).
-- **Model Gemini/Groq có thể ngừng hỗ trợ đột ngột** — đã gặp thật (`gemini-2.5-flash` bị deprecate
-  giữa chừng, `llama-3.3-70b-versatile` trên Groq cũng vậy) — nếu lỗi 404 "model not found", đổi
-  `GEMINI_MODEL`/`GROQ_MODEL` trong `.env` sang model hiện có (`python -c` liệt kê model Groq khả
-  dụng, xem code trong `src/groq_client.py`).
-- **Edge-TTS không phải API chính thức** — thỉnh thoảng báo lỗi tạm thời, tool tự retry.
-- **Link sản phẩm cần tự gắn tag affiliate** qua Shopee Affiliate Portal trước khi đăng — file
-  scrape chỉ có `productUrl` gốc, tool sẽ cảnh báo khi phát hiện thiếu.
-- **Không nên auto-publish 100%** — kênh dựng hàng loạt không biên tập có nguy cơ vi phạm chính
-  sách nội dung tái sử dụng của YouTube. `final_video.mp4` là điểm dừng kiểm duyệt bắt buộc.
-- **Render video mất khá lâu** (~1.5-2 lần thời lượng video, do hiệu ứng zoom-in mỗi câu dựng nhiều
-  ảnh tĩnh nối tiếp) — vẫn nhanh hơn animate thật từng frame rất nhiều lần (xem comment đầu
-  `src/video_assembly.py`). Nếu TẤT CẢ sản phẩm đều có video thật trong `product_media/`, thời
-  gian ghép có thể tăng thêm ~5-10 phút (mỗi đoạn video chèn vào tốn nhiều thời gian ghép hơn
-  ảnh tĩnh) — vẫn chỉ chèn 1 câu/sản phẩm, không phải toàn bộ.
+---
 
-## Cài đặt
+## ✨ Tính năng chính
+
+- **Bậc thang giá Top 5 → Top 1**: Top 5 là mẫu bình dân rẻ nhất, Top 1 là mẫu cao cấp nhất. Hạng càng cao càng xịn hơn rõ ràng, và Top 1 đáp ứng **tất cả** các tiêu chí mà Top 5 → Top 2 còn thiếu.
+- **Script bám ảnh thật**: Gemini xem từng ảnh/video sản phẩm và viết lời bình đúng với ảnh đang hiện.
+- **Review chân thật**: mỗi sản phẩm (kể cả Top 1) có 1 điểm "chê nhẹ" lặt vặt, bỏ qua được — tăng độ tin cậy mà không làm người xem mất hứng mua.
+- **Giọng đọc có cảm xúc**: thẻ `[cười nhẹ]`, `[nhấn mạnh]`... tạo khoảng lặng tự nhiên.
+- **Video kiểu CapCut**: zoom-in mượt theo từng frame, phụ đề hiện dần từng từ, chữ nhấn mạnh màu vàng, badge TOP/giá, hiệu ứng flash.
+- **Mô tả YouTube tự động**: link sản phẩm, timestamp, hashtag ghép sẵn.
+
+---
+
+## 🧠 Kiến trúc
+
+### 2 provider AI
+
+| Provider | Free tier | Dùng cho |
+|---|---|---|
+| **Groq** | 30 request/phút, ~14.400/ngày | Mọi bước chỉ cần text: chọn ngách, lọc keyword, lọc sản phẩm, hook, CTA, metadata |
+| **Gemini** (multimodal) | 5 request/phút, ~20/ngày | **Chỉ** bước viết lời bình từng sản phẩm (cần "nhìn" ảnh/video thật) — ~5 request/video |
+
+### 2 giai đoạn
+
+1. **Chọn lọc**: Ngách → Lọc keyword → Chọn đúng 5 sản phẩm theo bậc thang giá → **dừng lại** để bạn tự lấy ảnh/video chi tiết thật từ Shopee (thumbnail kết quả tìm kiếm không đủ chi tiết).
+2. **Viết script + dựng video**: Gemini viết lời bình bám theo từng ảnh → audio giọng liền mạch → ghép video → ghi log vào DB.
+
+---
+
+## ⚠️ Lưu ý trước khi dùng
+
+- **Quota Gemini free ~20 request/ngày** → khoảng 4 video/ngày. Bật billing tại Google AI Studio nếu cần nhiều hơn (chỉ vài cent/video).
+- **Model có thể bị ngừng hỗ trợ đột ngột** (đã gặp với `gemini-2.5-flash` và `llama-3.3-70b-versatile`). Nếu gặp lỗi 404 *"model not found"*, đổi `GEMINI_MODEL` / `GROQ_MODEL` trong `.env` sang model đang hoạt động.
+- **Edge-TTS không phải API chính thức** — thỉnh thoảng lỗi tạm thời, tool tự retry.
+- **Link sản phẩm cần tự gắn tag affiliate** qua Shopee Affiliate Portal trước khi đăng — file scrape chỉ có `productUrl` gốc, tool sẽ cảnh báo khi thiếu.
+- **Không nên auto-publish 100%** — kênh đăng hàng loạt không biên tập dễ vi phạm chính sách nội dung tái sử dụng của YouTube. Hãy xem lại `final_video.mp4` trước khi đăng.
+- **Thời gian render**: zoom được dựng theo từng frame bằng OpenCV (~18 ms/frame). Mỗi sản phẩm có `video.mp4` thật sẽ tốn thêm thời gian ghép (chỉ chèn 1 câu/sản phẩm).
+
+---
+
+## 📦 Cài đặt
+
+Yêu cầu: **Python 3.10+**, Windows (hoặc Linux/macOS — đổi lệnh kích hoạt venv tương ứng).
 
 ```bash
 python -m venv venv
@@ -43,108 +71,148 @@ pip install -r requirements.txt
 copy .env.example .env
 ```
 
-Điền vào `.env`: `GEMINI_API_KEY` (https://aistudio.google.com/apikey) và `GROQ_API_KEY`
-(https://console.groq.com/keys, miễn phí, không cần thẻ).
+Điền API key vào `.env`:
 
-## Giao diện web (Streamlit) — khuyên dùng thay vì CLI
+| Biến | Lấy ở đâu |
+|---|---|
+| `GEMINI_API_KEY` | <https://aistudio.google.com/apikey> |
+| `GROQ_API_KEY` | <https://console.groq.com/keys> (miễn phí, không cần thẻ) |
+
+> `opencv-python-headless` là tuỳ chọn nhưng nên cài (đã có trong `requirements.txt`) — thiếu thì zoom vẫn chạy nhưng render chậm hơn nhiều.
+
+---
+
+## 🖥 Giao diện web (Streamlit)
+
+**Khuyên dùng** thay vì CLI:
 
 ```bash
 venv\Scripts\activate
 streamlit run app.py
 ```
 
-Mở `http://localhost:8501`. Sidebar để chọn/tạo 1 "run" (phiên làm việc); 6 tab tương ứng
-đúng luồng CLI bên dưới nhưng thao tác bằng chuột — upload CSV/JSON, xem/upload ảnh sản phẩm
-theo từng thư mục, sửa script ngay trên trình duyệt, nghe thử từng audio, sửa mô tả YouTube (title/
-link/timestamp/hashtag đã ghép sẵn) trước khi copy đi đăng, xem trước + tải video, xem bảng lịch sử
-và nhập số liệu hiệu suất — không cần nhớ lệnh/flag nào cả. Phần CLI dưới đây vẫn dùng được song
-song (cùng đọc/ghi chung `data/`), phù hợp khi muốn chạy tự động theo script.
+Mở <http://localhost:8501>. Sidebar dùng để chọn/tạo một **run** (phiên làm việc). Các tab đi đúng theo luồng CLI nhưng thao tác bằng chuột:
 
-## Chuẩn bị dữ liệu đầu vào
+- Upload file CSV/JSON đầu vào
+- Xem/upload ảnh sản phẩm theo từng thư mục
+- Sửa script ngay trên trình duyệt, nghe thử từng audio
+- Sửa mô tả YouTube (title, link, timestamp, hashtag) trước khi đăng
+- Xem trước và tải video
+- Xem lịch sử và nhập số liệu hiệu suất
+
+CLI vẫn dùng song song được (cùng đọc/ghi thư mục `data/`).
+
+> Sau khi sửa code trong `src/`, cần **restart Streamlit** để nhận thay đổi. File prompt `prompts/*.md` thì được đọc lại mỗi lần chạy.
+
+---
+
+## 📥 Chuẩn bị dữ liệu đầu vào
 
 Đặt vào `data/input/`:
 
-- **1 hoặc nhiều file `.csv` từ khóa** (export từ tool nghiên cứu keyword). Bắt buộc có cột
-  `Keyword`; `Search volume`, `Competition`, `Overall`, `Related score` tùy chọn nhưng nên có.
-- **1 file `.json` sản phẩm Shopee** dạng `{"products": [{"name","price","imageUrl","productUrl",
-  "salesVolume",...}]}`.
+- **Một hoặc nhiều file `.csv` từ khoá** (export từ tool nghiên cứu keyword)
+  - Bắt buộc: cột `Keyword`
+  - Nên có: `Search volume`, `Competition`, `Overall`, `Related score`
+- **Một file `.json` sản phẩm Shopee**, dạng:
+
+  ```json
+  {
+    "products": [
+      { "name": "...", "price": 0, "imageUrl": "...", "productUrl": "...", "salesVolume": 0 }
+    ]
+  }
+  ```
 
 Nếu file thật có cấu trúc khác, chỉnh `src/ingestion.py`.
 
-## Chạy — luồng đầy đủ (2 lệnh)
+---
 
-**Bước A — chọn 5 sản phẩm:**
+## 🚀 Chạy bằng CLI
+
+### Bước A — Chọn 5 sản phẩm
 
 ```bash
 python main.py
 ```
 
-Tự đọc `.csv`/`.json` trong `data/input/`, chạy Prompt 1-3, dừng lại và in hướng dẫn xem
-`03b_product_links.md`.
+Đọc các file trong `data/input/`, chạy prompt 1-3, rồi dừng lại và hướng dẫn mở `03b_product_links.md`.
 
-**Bước B — lấy ảnh thật rồi viết script + audio + video:**
+### Bước B — Lấy ảnh thật, rồi viết script + audio + video
 
-Vào từng link Shopee trong `03b_product_links.md`, tải ảnh chính (`main_images/`), ảnh mô tả
-(`description_images/`), video sản phẩm nếu có — thả vào đúng thư mục
-`product_media/<rank>_<tên-sp>/`. Có thể để trống nếu sản phẩm nào không có ảnh riêng (tool tự
-sinh gợi ý prompt Google Flow trong `07_flow_prompts.md` để bạn tự tạo ảnh AI bù vào, vì Flow
-không có API miễn phí để tool tự gọi). Xong thì:
+1. Mở từng link Shopee trong `03b_product_links.md`.
+2. Tải ảnh/video vào đúng thư mục `product_media/<rank>_<tên-sp>/`:
+   - `main_images/` — ảnh chính
+   - `description_images/` — ảnh mô tả
+   - `video.mp4` — video sản phẩm (nếu có)
+3. Sản phẩm nào không có ảnh có thể để trống — tool sẽ sinh prompt Google Flow trong `07_flow_prompts.md` để bạn tự tạo ảnh AI bù vào.
+4. Chạy:
 
 ```bash
 python main.py --script-only data/output/<run_id>
 ```
 
-Kết quả trong `data/output/<run_id>/`:
+### Các lệnh khác
 
-- `01_niche.json`, `02_keywords_filtered.json`, `03_products_selected.json` — output Giai đoạn 1.
-- `04_script.txt` — script, mỗi câu mô tả 1 ảnh cụ thể (đánh dấu `[[IMG:n]]` nội bộ) + thẻ cảm xúc.
-- `05_metadata.json` — tiêu đề/hook mô tả/nhãn timestamp mở-kết/tags/thumbnail.
-  `07_flow_prompts.md` — nếu có sản phẩm thiếu ảnh.
-- `audio/*.mp3` — mỗi sản phẩm 1 file, giọng liền mạch (không đổi "người" giữa các câu).
-- `06_media_manifest.json` — "beats": từng câu + ảnh cụ thể + timing, dùng để ghép video.
-- `08_youtube_description.txt` — mô tả YouTube ĐẦY ĐỦ, ghép tự động SAU khi có audio (cần thời
-  lượng thật để tính mốc thời gian): đoạn mở đầu → link từng sản phẩm (đúng thứ tự trong video) →
-  timestamp từng đoạn → nhắc like/subscribe → hashtag. Dán thẳng vào ô mô tả khi đăng — nhớ đổi
-  link sang bản đã gắn tag affiliate trước.
-- `final_video.mp4` — nền mờ phóng to từ chính ảnh đang hiện + ảnh nét ở giữa + badge TOP/giá +
-  phụ đề hiện DẦN từng từ theo tiến độ đọc trong câu (không hiện trọn câu ngay từ đầu — xấp xỉ
-  tuyến tính theo số từ vì edge-tts không cho timing từng từ chính xác) + chữ nhấn mạnh màu vàng
-  viền đen đè trên phụ đề (kiểu CapCut, xem bên dưới) + card lý do chọn ở câu đầu mỗi sản phẩm +
-  zoom-in mượt mỗi câu (liên tục xuyên suốt nếu nhiều câu tả chung 1 ảnh, không giật lùi) + hiệu
-  ứng flash sáng mỗi ~12s. Sản phẩm nào có
-  `video.mp4` thật trong `product_media/` sẽ được thay 1 câu (dài nhất) bằng ĐÚNG đoạn video đó,
-  tắt tiếng, cắt vừa khít thời lượng câu — không kéo dài video tổng, nhưng ghép LÂU HƠN nhiều
-  (đã đo: ~10 lần/giây so với ảnh tĩnh) nên chỉ dùng có chọn lọc, không phải mọi câu.
+| Mục đích | Lệnh |
+|---|---|
+| Test nhanh không cần ảnh thật | `python main.py --auto-script` |
+| Sửa tay `04_script.txt` rồi chạy lại audio + video (không tốn API) | `python main.py --media-only data/output/<run_id>` |
+| Chỉ ghép lại video | `python main.py --assemble-only data/output/<run_id>` |
+| Video dọc 1080x1920 cho Shorts | `python main.py --assemble-only data/output/<run_id> --vertical` |
 
-**Test nhanh không cần ảnh thật** (viết script chỉ dựa tên/giá, bỏ qua bước dừng):
+**Tuỳ chọn thêm:**
 
-```bash
-python main.py --auto-script
-```
+| Flag | Ý nghĩa |
+|---|---|
+| `--voice vi-VN-NamMinhNeural` | Đổi sang giọng nam |
+| `--rate +10%` | Đọc nhanh hơn |
+| `--fps 24` | Đổi FPS video |
+| `--font <path.ttf>` | Đổi font chữ |
+| `--skip-media` | Dừng sau khi có script |
+| `--skip-assembly` | Dừng sau khi có audio, chưa ghép video |
 
-**Sửa tay script rồi chỉ chạy lại audio+video** (không tốn API Gemini/Groq):
+> 💡 Nếu chạy lại bước viết script cho một run cũ, hãy xoá `04_script_progress.json` trong thư mục run — nếu không, tool sẽ dùng lại lời bình đã sinh trước đó.
 
-```bash
-# ... sửa data/output/<run_id>/04_script.txt ...
-python main.py --media-only data/output/<run_id>
-```
+---
 
-**Chỉ ghép lại video** (đổi khung hình/font, dùng audio/ảnh đã có sẵn):
+## 📂 Kết quả đầu ra
 
-```bash
-python main.py --assemble-only data/output/<run_id>
-python main.py --assemble-only data/output/<run_id> --vertical   # dọc 1080x1920 cho Shorts
-```
+Tất cả nằm trong `data/output/<run_id>/`:
 
-Tùy chọn khác: `--voice vi-VN-NamMinhNeural` (giọng nam), `--rate +10%` (đọc nhanh hơn),
-`--fps 24`, `--font <path.ttf>`, `--skip-media` (dừng sau script), `--skip-assembly` (dừng sau
-audio, chưa ghép video).
+| File | Nội dung |
+|---|---|
+| `01_niche.json` | Ngách đã chọn |
+| `02_keywords_filtered.json` | Từ khoá đã lọc |
+| `03_products_selected.json` | 5 sản phẩm: hạng, phân khúc, tiêu chí đáp ứng/còn thiếu, điểm chê nhẹ |
+| `03b_product_links.md` | Link từng sản phẩm để lấy ảnh/video |
+| `04_script.txt` | Script — mỗi câu gắn 1 ảnh cụ thể + thẻ cảm xúc |
+| `05_metadata.json` | Tiêu đề, hook mô tả, nhãn timestamp, tags, chữ thumbnail |
+| `06_media_manifest.json` | Từng câu + ảnh + timing, dùng để ghép video |
+| `07_flow_prompts.md` | Prompt Google Flow (chỉ khi có sản phẩm thiếu ảnh) |
+| `08_youtube_description.txt` | Mô tả YouTube đầy đủ: mở đầu → link sản phẩm → timestamp → hashtag |
+| `audio/*.mp3` | Mỗi đoạn một file, giọng liền mạch |
+| `final_video.mp4` | Video hoàn chỉnh |
 
-## Bước 4 — Log lịch sử & đo hiệu suất
+**Video `final_video.mp4` gồm:**
 
-Mỗi lần ghép video xong, tool tự ghi vào `data/history.db` (SQLite): ngách, tiêu đề, danh sách sản
-phẩm, đường dẫn video. **Không có API tự động lấy YouTube Analytics / Shopee Affiliate** (cần OAuth
-+ đăng ký app riêng, ngoài phạm vi tool cá nhân) — sau khi đăng video và theo dõi vài ngày, tự nhập:
+- Nền mờ phóng to từ chính ảnh đang hiện + ảnh sản phẩm nét ở giữa
+- Badge **TOP** và **giá**
+- Phụ đề hiện dần từng từ theo tiến độ đọc
+- Chữ nhấn mạnh màu vàng viền đen (kiểu CapCut)
+- Card "lý do chọn" ở câu đầu mỗi sản phẩm
+- Zoom-in mượt theo từng frame, liên tục xuyên suốt khi nhiều câu dùng chung 1 ảnh
+- Hiệu ứng flash sáng mỗi ~12 giây
+- Video sản phẩm thật (nếu có) chèn vào câu dài nhất của sản phẩm đó, tắt tiếng
+
+> ⚠️ Nhớ đổi link trong mô tả sang bản đã gắn tag affiliate trước khi đăng.
+
+---
+
+## 📊 Log lịch sử & hiệu suất
+
+Mỗi lần ghép video xong, tool tự ghi vào `data/history.db` (SQLite): ngách, tiêu đề, danh sách sản phẩm, đường dẫn video.
+
+Không có API tự động lấy YouTube Analytics / Shopee Affiliate, nên sau khi đăng video vài ngày, nhập số liệu thủ công:
 
 ```bash
 python main.py --log-performance data/output/<run_id> --views 1500 --ctr 4.2 --clicks 30 --revenue 250000 --youtube-url https://youtu.be/xxxx
@@ -156,54 +224,49 @@ Xem toàn bộ lịch sử + hiệu suất:
 python main.py --report
 ```
 
-Dùng số liệu này để nhận ra ngách/hook nào ra đơn tốt, ưu tiên làm lại kiểu tương tự — đây là phần
-quyết định doanh thu mà bản kế hoạch ban đầu còn thiếu.
+Dùng số liệu này để biết ngách/hook nào ra đơn tốt và ưu tiên làm lại kiểu tương tự.
 
-## Chỉnh prompt
+---
 
-`prompts/*.md`, cú pháp `{{PLACEHOLDER}}` — sửa trực tiếp, không cần đụng code Python.
+## ✏️ Chỉnh prompt
 
-- `04b_product_segment.md` là prompt DUY NHẤT nhận ảnh/video đính kèm (multimodal, gọi qua Gemini).
-  Yêu cầu Gemini đánh dấu `[[IMG:n]]` trước mỗi câu tương ứng với ảnh thứ n — nếu sửa, giữ nguyên
-  yêu cầu định dạng này vì `src/script_parser.py` và `src/video_assembly.py` dựa vào đó để đồng bộ
-  đúng ảnh với đúng câu.
-- Tối đa **6 ảnh/sản phẩm** được gửi cho Gemini (ưu tiên `main_images/` trước) — chỉnh
-  `_MAX_IMAGES_FOR_SCRIPT` trong `src/product_links.py` nếu muốn nhiều/ít hơn (nhiều ảnh hơn = script
-  dài hơn = video dài hơn).
-- Thẻ cảm xúc `[cười nhẹ]`, `[thở dài]`, `[nhấn mạnh]`, `[ngập ngừng]`, `[hào hứng]` không đổi
-  pitch/tốc độ giọng (edge-tts không hỗ trợ nhiều mức prosody trong 1 lệnh gọi) — chỉ tạo khoảng
-  lặng gần đúng vị trí thẻ. Chỉnh độ dài khoảng lặng/từ khóa nhận diện trong `_PAUSE_MS_RULES` ở
-  `src/tts.py`.
-- `04d_highlight.md` sinh cụm từ nhấn mạnh (chữ to màu vàng đè lên phụ đề, kiểu CapCut) — vài lệnh
-  gọi Groq cho cả video, chia lô 20 câu/lần để JSON không bị cắt ngắn (xem `src/media_step.py:
-  _extract_highlights`), lô nào lỗi thì bỏ qua trang trí lô đó chứ không chặn audio/video. Đổi
-  màu/font size ở `HIGHLIGHT_COLOR`/`HIGHLIGHT_STROKE` trong `src/video_assembly.py`. Card "vì sao
-  chọn" ở câu đầu mỗi sản phẩm dùng lại `reason_selected` có sẵn, không tốn thêm request nào — đổi
-  màu ở `INTRO_CARD_BG`.
-- `05_metadata.md` (Groq, chạy 1 lần ở cuối Giai đoạn 2) ngoài title/tags còn sinh `hook_description`
-  (đoạn mở đầu mô tả YouTube) và `hook_label`/`outro_label` (nhãn timestamp mở đầu/kết).
-  `src/description.py: build_youtube_description()` ghép các phần này với thời lượng THẬT đọc từ
-  `06_media_manifest.json` (chỉ biết sau khi có audio) thành `08_youtube_description.txt` — gọi tự
-  động ở cuối `run_media_step()`, không tốn thêm request nào (thuần code). Tên sản phẩm trong
-  link/timestamp LUÔN lấy nguyên văn từ `03_products_selected.json`, tagline trong timestamp trích
-  thẳng từ `reason_selected` — KHÔNG để LLM tự đặt biệt danh/mô tả riêng (đã gặp thật: LLM gán nhầm
-  tính năng sản phẩm A cho timestamp của sản phẩm B khi được viết tự do).
+Các prompt nằm trong `prompts/*.md`, dùng cú pháp `{{PLACEHOLDER}}` — sửa trực tiếp, không cần đụng code Python.
 
-## Kiến trúc code (tham khảo nhanh)
+| Prompt | Ghi chú |
+|---|---|
+| `03_loc_san_pham.md` | Chọn 5 sản phẩm theo bậc thang giá. Code sắp lại hạng theo giá (Top 1 = đắt nhất) và cảnh báo nếu hạng trên kém tính năng hơn hạng dưới, hoặc Top 1 còn thiếu tiêu chí. |
+| `04b_product_segment.md` | Prompt **duy nhất** nhận ảnh/video (Gemini). Yêu cầu đánh dấu `[[IMG:n]]` trước mỗi câu — **giữ nguyên định dạng này** vì `src/script_parser.py` và `src/video_assembly.py` dựa vào đó để khớp ảnh với câu. |
+| `04d_highlight.md` | Sinh cụm chữ nhấn mạnh màu vàng (Groq, chia lô 20 câu/lần). Lô nào lỗi thì bỏ qua, không chặn audio/video. |
+| `05_metadata.md` | Sinh title, tags, `hook_description`, `hook_label` / `outro_label` cho mô tả YouTube. |
+
+**Một số tham số hay chỉnh:**
+
+| Muốn chỉnh | Ở đâu |
+|---|---|
+| Số ảnh tối đa gửi Gemini mỗi sản phẩm (mặc định 6) | `_MAX_IMAGES_FOR_SCRIPT` — `src/product_links.py` |
+| Độ dài khoảng lặng theo thẻ cảm xúc | `_PAUSE_MS_RULES` — `src/tts.py` |
+| Màu chữ nhấn mạnh | `HIGHLIGHT_COLOR`, `HIGHLIGHT_STROKE` — `src/video_assembly.py` |
+| Màu card "lý do chọn" | `INTRO_CARD_BG` — `src/video_assembly.py` |
+| Biên độ / tốc độ zoom | `_ZOOM_MAX`, `_ZOOM_SPEED`, `_ZOOM_FOCUS_Y` — `src/video_assembly.py` |
+
+> Thẻ cảm xúc (`[cười nhẹ]`, `[thở dài]`, `[nhấn mạnh]`, `[ngập ngừng]`, `[hào hứng]`) không đổi cao độ giọng (edge-tts không hỗ trợ), chỉ tạo khoảng lặng gần đúng vị trí thẻ.
+
+> Tên sản phẩm trong link/timestamp luôn lấy nguyên văn từ `03_products_selected.json` — không để LLM tự đặt, vì đã gặp lỗi LLM gán nhầm tính năng sản phẩm A cho sản phẩm B.
+
+---
+
+## 🗂 Cấu trúc code
 
 | File | Vai trò |
 |---|---|
+| `app.py` | Giao diện web Streamlit |
 | `main.py` | CLI, điều phối toàn bộ luồng |
-| `src/pipeline.py` | Chuỗi prompt Giai đoạn 1-2, checkpoint resume khi hết quota giữa chừng |
-| `src/gemini_client.py` / `src/groq_client.py` | Wrapper 2 provider, retry rate-limit |
-| `src/ingestion.py` / `src/product_links.py` | Đọc CSV/JSON đầu vào, quản lý `product_media/` |
+| `src/pipeline.py` | Chuỗi prompt giai đoạn 1-2, xếp hạng bậc thang giá, checkpoint resume khi hết quota |
+| `src/gemini_client.py`, `src/groq_client.py` | Wrapper 2 provider, retry khi bị rate-limit |
+| `src/ingestion.py`, `src/product_links.py` | Đọc CSV/JSON đầu vào, quản lý `product_media/` |
 | `src/script_parser.py` | Tách `04_script.txt` thành đoạn/khối theo `[[IMG:n]]` |
-| `src/tts.py` | Sinh audio — 1 lệnh gọi/block, cảm xúc = khoảng lặng |
-| `src/media_step.py` | Nối script_parser + tts + tải ảnh thumbnail dự phòng + gọi description.py |
-| `src/description.py` | Ghép `08_youtube_description.txt` từ metadata + timing thật (sau khi có audio) |
-| `src/video_assembly.py` | Ghép MP4 bằng MoviePy — xem comment đầu file về các hiệu ứng đã thử và bỏ vì quá chậm |
-| `src/database.py` | SQLite log lịch sử + hiệu suất (Bước 4) |
-
-Xem chi tiết đầy đủ trong bản kế hoạch tối ưu (artifact đã publish trong hội thoại).
-#   a f f _ v i d e o  
- 
+| `src/tts.py` | Sinh audio — cảm xúc = khoảng lặng |
+| `src/media_step.py` | Nối script parser + TTS + ảnh dự phòng + mô tả YouTube |
+| `src/description.py` | Ghép `08_youtube_description.txt` từ metadata + timing thật |
+| `src/video_assembly.py` | Ghép MP4 bằng MoviePy + Pillow + OpenCV (xem comment đầu file) |
+| `src/database.py` | SQLite log lịch sử + hiệu suất |
