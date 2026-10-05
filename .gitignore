@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+venv/
+data/output/*
+!data/output/.gitkeep
+data/history.db
+
+# Video thử nghiệm/benchmark ở thư mục gốc
+/*.mp4
+# Dữ liệu đầu vào riêng của từng lần làm
+data/input/*
+!data/input/.gitkeep

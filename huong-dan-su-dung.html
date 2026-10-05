@@ -1,0 +1,533 @@
+<title>Sổ Tay Auto Video Affiliate</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#eef2ef; --surface:#ffffff; --surface-2:#f4f7f5;
+  --ink:#14211d; --ink-soft:#4a5b54; --ink-faint:#7c8b83;
+  --line:#d3dbd5; --line-soft:#e3e9e4;
+  --accent:#2f6f5e; --accent-ink:#1c4a3e; --accent-soft:#dceae4;
+  --amber:#a86416; --amber-soft:#f3e4d0;
+  --risk-hi:#a83c29; --risk-hi-soft:#f5e1db;
+  --risk-md:#8a6a17; --risk-md-soft:#f1e6cd;
+  --code-bg:#0f1a16; --code-ink:#d9ede4; --code-accent:#7fd6b8;
+  --shadow: 0 1px 2px rgba(20,33,29,.05), 0 6px 20px -10px rgba(20,33,29,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1613; --surface:#16211c; --surface-2:#1b2721;
+    --ink:#e7ede9; --ink-soft:#a6b7ae; --ink-faint:#79897f;
+    --line:#293630; --line-soft:#20302a;
+    --accent:#5cba9c; --accent-ink:#8fd5bd; --accent-soft:#1c352d;
+    --amber:#e2a35f; --amber-soft:#382a18;
+    --risk-hi:#e2695a; --risk-hi-soft:#3a211d;
+    --risk-md:#d9b661; --risk-md-soft:#362c17;
+    --code-bg:#0a120f; --code-ink:#cdeadb; --code-accent:#7fd6b8;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px -10px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1613; --surface:#16211c; --surface-2:#1b2721;
+  --ink:#e7ede9; --ink-soft:#a6b7ae; --ink-faint:#79897f;
+  --line:#293630; --line-soft:#20302a;
+  --accent:#5cba9c; --accent-ink:#8fd5bd; --accent-soft:#1c352d;
+  --amber:#e2a35f; --amber-soft:#382a18;
+  --risk-hi:#e2695a; --risk-hi-soft:#3a211d;
+  --risk-md:#d9b661; --risk-md-soft:#362c17;
+  --code-bg:#0a120f; --code-ink:#cdeadb; --code-accent:#7fd6b8;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px -10px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Be Vietnam Pro","Segoe UI",Arial,sans-serif;
+  font-size:16px; line-height:1.65;
+}
+code,.mono,.mono *{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace;}
+h1,h2,h3,h4{text-wrap:balance; letter-spacing:-.01em;}
+a{color:var(--accent-ink);}
+
+.shell{display:flex; max-width:1160px; margin:0 auto;}
+
+/* ---------- sidebar TOC ---------- */
+.toc{
+  width:248px; flex-shrink:0; position:sticky; top:0; align-self:flex-start;
+  height:100vh; overflow-y:auto; padding:32px 18px 32px 24px;
+  border-right:1px solid var(--line);
+}
+.toc-brand{
+  font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--accent-ink); margin-bottom:22px; display:flex; align-items:center; gap:7px;
+}
+.toc-brand .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+.toc a{
+  display:block; font-size:13.5px; color:var(--ink-soft); text-decoration:none;
+  padding:6px 10px; border-radius:7px; margin-bottom:2px;
+}
+.toc a:hover{background:var(--surface-2); color:var(--ink);}
+.toc .grp-label{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--ink-faint); margin:18px 0 6px 10px;
+}
+.toc .grp-label:first-child{margin-top:0;}
+
+@media (max-width: 880px){
+  .toc{display:none;}
+}
+
+/* ---------- main content ---------- */
+main{flex:1; min-width:0; padding:40px 32px 90px; max-width:760px;}
+
+header.hero{margin-bottom:40px;}
+.eyebrow{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--accent-ink); background:var(--accent-soft); border-radius:999px; padding:5px 12px 5px 10px;
+  margin-bottom:18px;
+}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent-ink);}
+h1{font-size:clamp(28px,4.5vw,38px); font-weight:800; margin:0 0 10px; color:var(--ink);}
+.sub{color:var(--ink-soft); font-size:16.5px; max-width:600px; margin:0;}
+
+.mobile-toc{display:none; margin-bottom:36px; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 18px;}
+.mobile-toc summary{font-family:"IBM Plex Mono",monospace; font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--accent-ink); cursor:pointer;}
+.mobile-toc a{display:block; font-size:14px; padding:5px 0; color:var(--ink-soft); text-decoration:none;}
+@media (max-width: 880px){ .mobile-toc{display:block;} }
+
+section{padding:36px 0; border-bottom:1px solid var(--line-soft); scroll-margin-top:20px;}
+section:last-of-type{border-bottom:none;}
+.sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:6px;}
+.sec-num{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--accent-ink); background:var(--accent-soft); border-radius:6px; padding:3px 9px; flex-shrink:0;}
+h2{font-size:23px; font-weight:700; margin:0;}
+.sec-sub{color:var(--ink-faint); font-size:14px; margin:0 0 20px; padding-left:47px;}
+h3{font-size:16.5px; font-weight:700; margin:26px 0 10px;}
+p{margin:0 0 13px; max-width:66ch;}
+ul,ol{margin:0 0 14px; padding-left:22px; max-width:64ch;}
+li{margin-bottom:6px;}
+strong{color:var(--ink); font-weight:700;}
+
+/* ---------- code blocks ---------- */
+pre{
+  background:var(--code-bg); color:var(--code-ink); border-radius:10px; padding:16px 18px;
+  overflow-x:auto; margin:0 0 16px; font-family:"IBM Plex Mono",monospace; font-size:13.5px; line-height:1.7;
+}
+pre .cmt{color:#7fa094;}
+:not(pre) > code{
+  font-family:"IBM Plex Mono",monospace; font-size:.9em; background:var(--surface-2);
+  border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--accent-ink);
+}
+
+/* ---------- callouts ---------- */
+.callout{border-radius:10px; padding:14px 18px; margin:0 0 16px; border-left:4px solid; font-size:14.5px;}
+.callout p{margin:0 0 6px; max-width:none;}
+.callout p:last-child{margin-bottom:0;}
+.callout .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; display:block; margin-bottom:4px;}
+.callout.warn{background:var(--risk-hi-soft); border-color:var(--risk-hi);}
+.callout.warn .lbl{color:var(--risk-hi);}
+.callout.tip{background:var(--amber-soft); border-color:var(--amber);}
+.callout.tip .lbl{color:var(--amber);}
+.callout.note{background:var(--accent-soft); border-color:var(--accent);}
+.callout.note .lbl{color:var(--accent-ink);}
+
+/* ---------- step list ---------- */
+.steps{counter-reset:stepnum; margin:0 0 20px; padding:0; list-style:none; max-width:none;}
+.steps > li{
+  counter-increment:stepnum; position:relative; padding:0 0 22px 40px; margin:0;
+  border-left:2px solid var(--line); margin-left:15px;
+}
+.steps > li:last-child{border-color:transparent; padding-bottom:0;}
+.steps > li::before{
+  content:counter(stepnum); position:absolute; left:-15px; top:0;
+  width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff;
+  font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:13.5px;
+  display:flex; align-items:center; justify-content:center;
+}
+.steps h4{font-size:15.5px; font-weight:700; margin:2px 0 6px;}
+.steps p{margin-bottom:8px;}
+
+/* ---------- tables ---------- */
+.tblwrap{overflow-x:auto; border:1px solid var(--line); border-radius:10px; margin:0 0 18px;}
+table{width:100%; border-collapse:collapse; font-size:13.8px; background:var(--surface); min-width:520px;}
+th{
+  font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); text-align:left;
+  padding:11px 14px; background:var(--surface-2); border-bottom:1px solid var(--line); font-weight:700;
+}
+td{padding:11px 14px; border-bottom:1px solid var(--line-soft); vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+td code{white-space:nowrap;}
+
+/* ---------- file tree ---------- */
+.tree{
+  font-family:"IBM Plex Mono",monospace; font-size:13px; background:var(--surface-2);
+  border:1px solid var(--line); border-radius:10px; padding:16px 20px; line-height:1.9; margin:0 0 16px;
+}
+.tree .dir{color:var(--accent-ink); font-weight:600;}
+.tree .cmt{color:var(--ink-faint);}
+
+footer{max-width:760px; margin:0 auto; padding:0 32px 60px; color:var(--ink-faint); font-size:13px; font-family:"IBM Plex Mono",monospace;}
+</style>
+
+<div class="shell">
+  <nav class="toc">
+    <div class="toc-brand"><span class="dot"></span>Sổ tay vận hành</div>
+
+    <div class="grp-label">Bắt đầu</div>
+    <a href="#tong-quan">Tổng quan &amp; kiến trúc</a>
+    <a href="#cai-dat">Cài đặt</a>
+    <a href="#du-lieu">Dữ liệu đầu vào</a>
+
+    <div class="grp-label">Vận hành</div>
+    <a href="#buoc-a">Bước A — Chọn sản phẩm</a>
+    <a href="#buoc-b">Bước B — Script + Video</a>
+    <a href="#output">Cấu trúc kết quả</a>
+
+    <div class="grp-label">Tham khảo</div>
+    <a href="#lenh-cli">Toàn bộ lệnh CLI</a>
+    <a href="#chinh-prompt">Chỉnh prompt</a>
+    <a href="#hieu-suat">Đo hiệu suất</a>
+    <a href="#su-co">Xử lý sự cố</a>
+    <a href="#rui-ro">Rủi ro cần biết</a>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow"><span class="dot"></span>Auto Video Affiliate · v1</div>
+      <h1>Sổ Tay Vận Hành</h1>
+      <p class="sub">Hướng dẫn đầy đủ để dựng 1 video review affiliate Shopee từ đầu đến lúc đăng —
+      từ chọn sản phẩm, lấy ảnh thật, tới video hoàn chỉnh và đo hiệu suất.</p>
+    </header>
+
+    <details class="mobile-toc">
+      <summary>Mục lục</summary>
+      <a href="#tong-quan">Tổng quan &amp; kiến trúc</a>
+      <a href="#cai-dat">Cài đặt</a>
+      <a href="#du-lieu">Dữ liệu đầu vào</a>
+      <a href="#buoc-a">Bước A — Chọn sản phẩm</a>
+      <a href="#buoc-b">Bước B — Script + Video</a>
+      <a href="#output">Cấu trúc kết quả</a>
+      <a href="#lenh-cli">Toàn bộ lệnh CLI</a>
+      <a href="#chinh-prompt">Chỉnh prompt</a>
+      <a href="#hieu-suat">Đo hiệu suất</a>
+      <a href="#su-co">Xử lý sự cố</a>
+      <a href="#rui-ro">Rủi ro cần biết</a>
+    </details>
+
+    <section id="tong-quan">
+      <div class="sec-head"><span class="sec-num">01</span><h2>Tổng quan &amp; kiến trúc</h2></div>
+      <p class="sec-sub">Tool làm gì, và tại sao dùng 2 nhà cung cấp AI khác nhau</p>
+
+      <p>Tool tự động hóa toàn bộ quy trình dựng video "Top 5 sản phẩm" cho kênh affiliate Shopee:
+      từ danh sách từ khóa + dữ liệu sản phẩm thô, ra một file <code>final_video.mp4</code> có
+      script bám sát ảnh thật, giọng đọc tự nhiên, và badge giá/thứ hạng.</p>
+
+      <p>Pipeline dùng <strong>2 nhà cung cấp AI</strong>, chia việc theo đúng thế mạnh để tối ưu
+      cả tốc độ lẫn chi phí:</p>
+
+      <div class="tblwrap">
+        <table>
+          <tr><th>Provider</th><th>Dùng cho</th><th>Vì sao</th></tr>
+          <tr>
+            <td><strong>Groq</strong><br><span class="mono" style="color:var(--ink-faint)">openai/gpt-oss-120b</span></td>
+            <td>Chọn ngách, lọc keyword, lọc sản phẩm, hook, CTA, metadata</td>
+            <td>Free tier rộng (30 request/phút, ~14.400/ngày) — không cần xem ảnh nên không cần Gemini</td>
+          </tr>
+          <tr>
+            <td><strong>Gemini</strong><br><span class="mono" style="color:var(--ink-faint)">gemini-3.6-flash</span></td>
+            <td>CHỈ bước viết lời bình từng sản phẩm</td>
+            <td>Đây là bước duy nhất cần "nhìn" ảnh/video thật (multimodal) — free tier hẹp (20/ngày) nên chỉ dùng đúng chỗ cần</td>
+          </tr>
+        </table>
+      </div>
+
+      <p>Nhờ cách chia này, 1 video chỉ tốn khoảng <strong>5 request Gemini</strong> (1 cho mỗi sản
+      phẩm) thay vì 11+ nếu dùng Gemini cho mọi bước — đủ làm ~4 video/ngày trên free tier.</p>
+
+      <div class="callout note">
+        <span class="lbl">Vì sao phải dừng lại giữa chừng?</span>
+        <p>Dữ liệu sản phẩm scrape từ Shopee chỉ có ảnh thumbnail nhỏ trong kết quả tìm kiếm —
+        không đủ chi tiết để viết script hay. Tool dừng sau khi chọn 5 sản phẩm để bạn tự vào
+        trang chi tiết lấy ảnh/video thật, rồi Gemini sẽ "nhìn" đúng những ảnh đó khi viết lời bình.</p>
+      </div>
+    </section>
+
+    <section id="cai-dat">
+      <div class="sec-head"><span class="sec-num">02</span><h2>Cài đặt</h2></div>
+      <p class="sec-sub">Một lần duy nhất trước khi dùng</p>
+
+      <pre>python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.example .env</pre>
+
+      <p>Mở file <code>.env</code> vừa tạo, điền 2 API key (đều miễn phí):</p>
+      <ul>
+        <li><code>GEMINI_API_KEY</code> — lấy tại <code>aistudio.google.com/apikey</code></li>
+        <li><code>GROQ_API_KEY</code> — lấy tại <code>console.groq.com/keys</code>, không cần thẻ ngân hàng</li>
+      </ul>
+
+      <div class="callout warn">
+        <span class="lbl">Model có thể ngừng hỗ trợ đột ngột</span>
+        <p>Cả Google lẫn Groq đều từng deprecate model giữa chừng không báo trước. Nếu gặp lỗi
+        <code>404 model not found</code>, mở <code>.env</code> đổi <code>GEMINI_MODEL</code> hoặc
+        <code>GROQ_MODEL</code> sang model hiện còn hỗ trợ (kiểm tra tại trang nhà cung cấp).</p>
+      </div>
+    </section>
+
+    <section id="du-lieu">
+      <div class="sec-head"><span class="sec-num">03</span><h2>Dữ liệu đầu vào</h2></div>
+      <p class="sec-sub">Đặt vào thư mục <code>data/input/</code></p>
+
+      <h3>File từ khóa (.csv)</h3>
+      <p>1 hoặc nhiều file export từ tool nghiên cứu keyword. Bắt buộc có cột <code>Keyword</code>;
+      nên có thêm <code>Search volume</code>, <code>Competition</code>, <code>Overall</code>,
+      <code>Related score</code> để lọc chính xác hơn. Nhiều file sẽ tự gộp + loại trùng.</p>
+
+      <h3>File sản phẩm (.json)</h3>
+      <p>1 file export từ extension scrape Shopee, dạng:</p>
+      <pre>{"products": [
+    {"name": "...", "price": "...", "imageUrl": "...",
+     "productUrl": "...", "salesVolume": "..."}
+]}</pre>
+      <p>Nếu file thật có cấu trúc khác, báo lại để chỉnh <code>src/ingestion.py</code>.</p>
+    </section>
+
+    <section id="buoc-a">
+      <div class="sec-head"><span class="sec-num">04</span><h2>Bước A — Chọn 5 sản phẩm</h2></div>
+      <p class="sec-sub"><code>python main.py</code></p>
+
+      <ol class="steps">
+        <li>
+          <h4>Chạy lệnh mặc định</h4>
+          <p>Tool tự đọc mọi <code>.csv</code>/<code>.json</code> trong <code>data/input/</code>,
+          chạy chuỗi 3 prompt (chọn ngách → lọc keyword → lọc đúng 5 sản phẩm) qua Groq, rồi
+          <strong>dừng lại</strong>.</p>
+        </li>
+        <li>
+          <h4>Mở file link vừa tạo</h4>
+          <p>Xem <code>data/output/&lt;run_id&gt;/03b_product_links.md</code> — danh sách 5 sản
+          phẩm kèm link Shopee, giá, lý do được chọn.</p>
+        </li>
+        <li>
+          <h4>Lấy ảnh/video thật cho từng sản phẩm</h4>
+          <p>Bấm vào từng link, vào trang chi tiết sản phẩm, tải/chụp ảnh và thả vào đúng thư mục:</p>
+          <div class="tree"><span class="dir">product_media/01_ten-san-pham/</span>
+├── <span class="dir">main_images/</span>          <span class="cmt"># ảnh chính từ trang sản phẩm</span>
+├── <span class="dir">description_images/</span>   <span class="cmt"># ảnh trong phần mô tả</span>
+└── video.mp4                <span class="cmt"># thả trực tiếp nếu có video (không bắt buộc)</span></div>
+          <p>Có thể để trống thư mục của sản phẩm nào đó — script vẫn viết được, chỉ dựa vào
+          tên/giá thay vì bám ảnh. Tool tự giới hạn dùng tối đa <strong>6 ảnh quan trọng nhất</strong>
+          mỗi sản phẩm (ưu tiên <code>main_images/</code>) để video không bị quá dài.</p>
+        </li>
+      </ol>
+
+      <div class="callout tip">
+        <span class="lbl">Sản phẩm không có ảnh riêng?</span>
+        <p>Bước B sẽ tự sinh gợi ý prompt tiếng Anh vào <code>07_flow_prompts.md</code> để bạn dán
+        sang <a href="https://labs.google/flow">Google Flow</a> tạo ảnh AI bù vào — Flow không có
+        API miễn phí để tool tự gọi, nên bước này vẫn cần thao tác tay.</p>
+      </div>
+    </section>
+
+    <section id="buoc-b">
+      <div class="sec-head"><span class="sec-num">05</span><h2>Bước B — Viết script + dựng video</h2></div>
+      <p class="sec-sub"><code>python main.py --script-only data/output/&lt;run_id&gt;</code></p>
+
+      <p>Sau khi đã thả ảnh xong, chạy lệnh trên. Tool tự động làm liên tiếp cả 4 việc:</p>
+
+      <ol class="steps">
+        <li>
+          <h4>Viết lời bình từng sản phẩm (Gemini)</h4>
+          <p>Với mỗi sản phẩm, Gemini nhìn trực tiếp các ảnh/video bạn đã thả vào, viết 1 câu mô
+          tả đúng nội dung cho mỗi ảnh — không nói chung chung.</p>
+        </li>
+        <li>
+          <h4>Sinh audio (edge-tts)</h4>
+          <p>Mỗi sản phẩm = 1 lệnh gọi giọng đọc duy nhất (giữ giọng liền mạch, không đổi "người"
+          giữa các câu). Thẻ cảm xúc như <code>[cười nhẹ]</code>, <code>[thở dài]</code> tạo khoảng
+          lặng đúng nhịp thay vì đổi tông giọng.</p>
+        </li>
+        <li>
+          <h4>Ghép video (MoviePy)</h4>
+          <p>Mỗi câu hiện đúng ảnh nó mô tả, zoom-in mượt suốt câu đó, nền mờ phóng to từ chính
+          ảnh đang chiếu, badge TOP/giá, phụ đề tiến triển theo câu kèm 1 dòng chữ nhấn mạnh màu
+          vàng viền đen đè lên trên (kiểu CapCut), card ngắn "vì sao chọn" ở câu đầu mỗi sản phẩm,
+          hiệu ứng flash nhẹ mỗi ~12 giây.</p>
+        </li>
+        <li>
+          <h4>Ghép mô tả YouTube</h4>
+          <p>Ghi <code>08_youtube_description.txt</code>: đoạn mở đầu, danh sách link từng sản phẩm
+          (đúng thứ tự trong video), mốc thời gian tính từ thời lượng audio THẬT, nhắc like/subscribe,
+          hashtag — dán thẳng vào ô mô tả khi đăng.</p>
+        </li>
+        <li>
+          <h4>Ghi lịch sử</h4>
+          <p>Tự động log vào <code>data/history.db</code> để theo dõi hiệu suất sau này (xem mục
+          <a href="#hieu-suat">Đo hiệu suất</a>).</p>
+        </li>
+      </ol>
+
+      <div class="callout warn">
+        <span class="lbl">Trước khi đăng</span>
+        <p>Luôn xem lại <code>final_video.mp4</code> trước khi đăng lên YouTube. Đây là điểm dừng
+        kiểm duyệt bắt buộc — kênh dựng hàng loạt không biên tập có nguy cơ vi phạm chính sách nội
+        dung tái sử dụng.</p>
+      </div>
+    </section>
+
+    <section id="output">
+      <div class="sec-head"><span class="sec-num">06</span><h2>Cấu trúc kết quả</h2></div>
+      <p class="sec-sub">Mọi thứ nằm trong <code>data/output/&lt;run_id&gt;/</code></p>
+
+      <div class="tree">01_niche.json                 <span class="cmt"># ngách đã chọn</span>
+02_keywords_filtered.json     <span class="cmt"># từ khóa đã lọc</span>
+03_products_selected.json     <span class="cmt"># 5 sản phẩm đã chọn</span>
+03b_product_links.md          <span class="cmt"># link để bạn lấy ảnh thật</span>
+<span class="dir">product_media/</span>                <span class="cmt"># nơi bạn thả ảnh/video thật</span>
+04_script.txt                 <span class="cmt"># kịch bản, đánh dấu ảnh nội bộ [[IMG:n]]</span>
+05_metadata.json              <span class="cmt"># tiêu đề/hook mô tả/biệt danh+tagline sp/tags</span>
+06_media_manifest.json        <span class="cmt"># timing từng câu + ảnh + audio + highlight</span>
+07_flow_prompts.md            <span class="cmt"># nếu có sản phẩm thiếu ảnh</span>
+<span class="dir">audio/</span>                        <span class="cmt"># 1 file mp3/sản phẩm</span>
+<span class="dir">images/</span>                       <span class="cmt"># ảnh thumbnail dự phòng</span>
+08_youtube_description.txt    <span class="cmt"># mô tả YouTube đầy đủ, dán thẳng khi đăng</span>
+final_video.mp4               <span class="cmt"># video hoàn chỉnh</span></div>
+    </section>
+
+    <section id="lenh-cli">
+      <div class="sec-head"><span class="sec-num">07</span><h2>Toàn bộ lệnh CLI</h2></div>
+      <p class="sec-sub">Tham khảo nhanh mọi cờ (flag) tool hỗ trợ</p>
+
+      <h3>Luồng chính</h3>
+      <div class="tblwrap">
+        <table>
+          <tr><th>Lệnh</th><th>Tác dụng</th></tr>
+          <tr><td><code>python main.py</code></td><td>Chạy từ đầu — chọn 5 sản phẩm rồi dừng chờ ảnh thật</td></tr>
+          <tr><td><code>--script-only RUN_DIR</code></td><td>Viết script bám ảnh + audio + video, từ 1 run đã chọn sản phẩm</td></tr>
+          <tr><td><code>--auto-script</code></td><td>Bỏ qua bước dừng lấy ảnh, viết script ngay theo tên/giá (test nhanh)</td></tr>
+          <tr><td><code>--media-only RUN_DIR</code></td><td>Chạy lại audio + video từ script đã sửa tay — không tốn API</td></tr>
+          <tr><td><code>--assemble-only RUN_DIR</code></td><td>Chỉ ghép lại video từ audio/ảnh có sẵn — không tốn API, không tốn TTS</td></tr>
+        </table>
+      </div>
+
+      <h3>Tùy chỉnh video</h3>
+      <div class="tblwrap">
+        <table>
+          <tr><th>Cờ</th><th>Ý nghĩa</th></tr>
+          <tr><td><code>--vertical</code></td><td>Xuất dọc 1080×1920 cho Shorts thay vì ngang 1920×1080</td></tr>
+          <tr><td><code>--voice vi-VN-NamMinhNeural</code></td><td>Đổi sang giọng nam (mặc định giọng nữ HoaiMy)</td></tr>
+          <tr><td><code>--rate +10%</code></td><td>Đọc nhanh/chậm hơn</td></tr>
+          <tr><td><code>--fps 24</code></td><td>Giảm dung lượng file xuất ra</td></tr>
+          <tr><td><code>--font "C:\...\font.ttf"</code></td><td>Đổi font phụ đề/badge</td></tr>
+          <tr><td><code>--skip-media</code></td><td>Dừng lại sau khi có script, chưa sinh audio/video</td></tr>
+          <tr><td><code>--skip-assembly</code></td><td>Dừng lại sau audio, chưa ghép video</td></tr>
+        </table>
+      </div>
+
+      <h3>Dữ liệu &amp; đo lường</h3>
+      <div class="tblwrap">
+        <table>
+          <tr><th>Cờ</th><th>Ý nghĩa</th></tr>
+          <tr><td><code>--keywords PATH</code></td><td>Chỉ định rõ file/thư mục CSV (mặc định tự tìm trong <code>data/input/</code>)</td></tr>
+          <tr><td><code>--products PATH</code></td><td>Chỉ định rõ file JSON sản phẩm</td></tr>
+          <tr><td><code>--report</code></td><td>In bảng lịch sử + hiệu suất mọi video đã tạo</td></tr>
+          <tr><td><code>--log-performance RUN_DIR</code></td><td>Nhập số liệu sau khi đăng — xem mục Đo hiệu suất</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="chinh-prompt">
+      <div class="sec-head"><span class="sec-num">08</span><h2>Chỉnh prompt</h2></div>
+      <p class="sec-sub"><code>prompts/*.md</code> — sửa trực tiếp, không cần đụng code Python</p>
+
+      <p>Cú pháp <code>{{PLACEHOLDER}}</code> được thay bằng dữ liệu thật lúc chạy. File quan trọng
+      nhất: <code>04b_product_segment.md</code> — prompt DUY NHẤT nhận ảnh/video đính kèm, yêu cầu
+      Gemini đánh dấu <code>[[IMG:n]]</code> trước mỗi câu ứng với ảnh thứ n.</p>
+
+      <div class="callout warn">
+        <span class="lbl">Giữ nguyên định dạng đánh dấu</span>
+        <p>Nếu sửa <code>04b_product_segment.md</code>, đừng bỏ yêu cầu đánh dấu <code>[[IMG:n]]</code>
+        — <code>video_assembly.py</code> dựa vào đó để hiện đúng ảnh cho đúng câu. Bỏ đi thì video
+        vẫn chạy được nhưng quay lại kiểu ảnh xoay vòng không đồng bộ nội dung.</p>
+      </div>
+
+      <p>Muốn đổi số ảnh tối đa/sản phẩm (mặc định 6, ảnh hưởng trực tiếp thời lượng video), sửa
+      <code>_MAX_IMAGES_FOR_SCRIPT</code> trong <code>src/product_links.py</code>.</p>
+
+      <p><code>05_metadata.md</code> (chạy 1 lần cuối Giai đoạn 2) sinh cả <code>hook_description</code>
+      (đoạn mở đầu mô tả YouTube), <code>hook_label</code>/<code>outro_label</code> (nhãn timestamp)
+      và <code>product_taglines</code> (biệt danh ngắn + tagline mỗi sản phẩm) — <code>src/description.py</code>
+      ghép các phần này với thời lượng THẬT đọc từ <code>06_media_manifest.json</code> (chỉ biết sau
+      khi có audio) thành <code>08_youtube_description.txt</code>, hoàn toàn tự động, không tốn thêm
+      request nào.</p>
+
+      <p><code>04d_highlight.md</code> sinh cụm từ nhấn mạnh cho phụ đề — chia lô 20 câu/lần gọi Groq
+      để JSON không bị cắt ngắn ở video dài.</p>
+    </section>
+
+    <section id="hieu-suat">
+      <div class="sec-head"><span class="sec-num">09</span><h2>Đo hiệu suất</h2></div>
+      <p class="sec-sub">Vòng lặp sản xuất → đăng → đo → tối ưu</p>
+
+      <p>Tool không có API tự động lấy YouTube Analytics hay Shopee Affiliate (cần đăng ký OAuth
+      riêng, ngoài phạm vi tool cá nhân). Sau khi đăng video và theo dõi vài ngày, tự nhập:</p>
+
+      <pre>python main.py --log-performance data/output/<span class="cmt">&lt;run_id&gt;</span> \
+    --views 1500 --ctr 4.2 --clicks 30 --revenue 250000 \
+    --youtube-url https://youtu.be/xxxx</pre>
+
+      <p>Xem toàn bộ lịch sử:</p>
+      <pre>python main.py --report</pre>
+
+      <p>Dùng số liệu này để nhận ra ngách/hook nào ra đơn tốt, ưu tiên lặp lại kiểu tương tự cho
+      các video sau.</p>
+    </section>
+
+    <section id="su-co">
+      <div class="sec-head"><span class="sec-num">10</span><h2>Xử lý sự cố thường gặp</h2></div>
+
+      <h3>"RESOURCE_EXHAUSTED" / hết quota Gemini</h3>
+      <p>Free tier Gemini giới hạn <strong>20 request/ngày, 5/phút</strong>. Nếu hết quota giữa
+      chừng, script đã sinh được sẽ tự lưu vào <code>04_script_progress.json</code> — chạy lại
+      đúng lệnh <code>--script-only</code> sau khi quota reset (hoặc đổi key/bật billing), tool tự
+      bỏ qua phần đã xong, không tốn quota làm lại.</p>
+
+      <h3>"404 model not found"</h3>
+      <p>Model đã bị nhà cung cấp ngừng hỗ trợ. Đổi <code>GEMINI_MODEL</code> hoặc
+      <code>GROQ_MODEL</code> trong <code>.env</code> sang model hiện còn hoạt động.</p>
+
+      <h3>"No audio was received" (edge-tts)</h3>
+      <p>Lỗi tạm thời của dịch vụ TTS không chính thức — tool tự retry 5 lần kèm nghỉ giữa các lần
+      gọi. Nếu vẫn lỗi, chạy lại <code>--media-only</code> sau vài phút.</p>
+
+      <h3>Video ghép quá lâu</h3>
+      <p>Thời gian ghép tỉ lệ với thời lượng video (thường ~1-1.4× thời lượng thật). Video càng
+      nhiều ảnh/sản phẩm càng lâu — giảm <code>_MAX_IMAGES_FOR_SCRIPT</code> nếu cần rút ngắn.</p>
+    </section>
+
+    <section id="rui-ro">
+      <div class="sec-head"><span class="sec-num">11</span><h2>Rủi ro cần biết</h2></div>
+
+      <div class="callout warn">
+        <span class="lbl">Chính sách YouTube</span>
+        <p>Kênh dựng video hàng loạt bằng AI, không biên tập, có nguy cơ vi phạm chính sách nội
+        dung tái sử dụng ("reused content") của YouTube. Luôn xem lại video trước khi đăng, không
+        auto-publish 100%.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="lbl">Link affiliate</span>
+        <p>File scrape Shopee chỉ có <code>productUrl</code> gốc, CHƯA gắn tag affiliate. Tool sẽ
+        cảnh báo khi phát hiện — bạn cần tự chuyển qua Shopee Affiliate Portal trước khi đăng, nếu
+        không sẽ không nhận được hoa hồng.</p>
+      </div>
+
+      <div class="callout note">
+        <span class="lbl">Phụ thuộc không chính thức</span>
+        <p>Edge-TTS không phải API chính thức của Microsoft — có thể ngừng hoạt động bất kỳ lúc
+        nào không báo trước. Model Gemini/Groq cũng có lịch sử bị deprecate đột ngột.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer>Auto Video Affiliate — tài liệu nội bộ, cập nhật theo mã nguồn thực tế trong dự án.</footer>
