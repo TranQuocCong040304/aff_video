@@ -13,6 +13,7 @@ Luồng trên UI giống hệt CLI, chỉ đổi cách thao tác:
     6) Lịch sử           -> data/history.db, nhập số liệu hiệu suất sau khi đăng
 """
 import json
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -37,7 +38,11 @@ from src.product_links import (
     write_product_links_file,
 )
 from src.tts import DEFAULT_VOICE
+from src.voice_import import AUDIO_TYPES, import_recorded_voice, recording_script
 from src.utils import slugify
+from src.capcut_akp import (BLUR_LEVELS as AKP_BLUR_LEVELS, DEFAULT_OPTIONS as AKP_DEFAULTS,
+                            KEYFRAME_STYLES as AKP_KEYFRAME_STYLES, SUBTITLE_STYLES as AKP_SUBTITLE_STYLES,
+                            enhance_draft)
 from src.capcut_export import capcut_is_running, default_drafts_root, export_capcut_draft
 from src.capcut_style import describe_style, extract_style, list_styles, load_style, save_style
 from src.render_job import any_render_running, get_status, start_render
@@ -353,26 +358,78 @@ with tab_script:
                         st.json(metadata)
 
                 st.divider()
-                st.write("**Sinh audio (edge-tts)**")
-                voice_label = st.selectbox("Giọng đọc", list(VOICES.keys()))
-                rate = st.text_input("Tốc độ đọc (vd +0%, +10%, -5%)", "+0%")
-                if st.button("🔊 Sinh audio từ script hiện tại"):
-                    script_path.write_text(edited, encoding="utf-8")
-                    with st.spinner("Đang sinh audio từng đoạn (edge-tts) + tải ảnh thumbnail dự phòng..."):
-                        try:
-                            run_media_step(edited, selection_data, run_dir, voice=VOICES[voice_label], rate=rate,
-                                            text_client=text_client)
-                        except Exception as e:
-                            st.error(f"[LỖI] {e}")
-                            st.stop()
-                    st.success("Đã sinh xong audio — sang tab 'Video' để ghép.")
-                    st.rerun()
+                voice_source = st.radio(
+                    "Giọng đọc", ["🤖 Giọng máy (edge-tts)", "🎙️ Tự thu (Google Vids, ElevenLabs, tự đọc...)"],
+                    horizontal=True,
+                    help="edge-tts chỉ có 2 giọng tiếng Việt. Tự thu: lấy kịch bản bên dưới, thu ở đâu cũng được "
+                         "rồi nộp lại — tool tự nghe lại để khớp ảnh/phụ đề theo từng câu.",
+                )
+                if voice_source.startswith("🤖"):
+                    voice_label = st.selectbox("Giọng", list(VOICES.keys()))
+                    rate = st.text_input("Tốc độ đọc (vd +0%, +10%, -5%)", "+0%")
+                    if st.button("🔊 Sinh audio từ script hiện tại"):
+                        script_path.write_text(edited, encoding="utf-8")
+                        with st.spinner("Đang sinh audio từng đoạn (edge-tts) + tải ảnh thumbnail dự phòng..."):
+                            try:
+                                run_media_step(edited, selection_data, run_dir, voice=VOICES[voice_label], rate=rate,
+                                               text_client=text_client)
+                            except Exception as e:
+                                st.error(f"[LỖI] {e}")
+                                st.stop()
+                        st.success("Đã sinh xong audio — sang tab 'Video' để ghép.")
+                        st.rerun()
+                else:
+                    rec_script = recording_script(edited, selection_data)
+                    st.markdown(
+                        "**Bước 1** — tải kịch bản thu âm (đã bỏ thẻ cảm xúc và `[[IMG]]`). Ở Google Vids: mỗi đoạn "
+                        "dán vào 1 cảnh → *Voiceover* → chọn giọng → tải video (mp4) về."
+                    )
+                    st.download_button("📄 Tải kịch bản thu âm (.txt)", rec_script,
+                                       file_name=f"kich_ban_thu_am_{run_dir.name}.txt", mime="text/plain")
+                    with st.expander("Xem kịch bản thu âm"):
+                        st.text(rec_script)
+                    st.markdown(
+                        "**Bước 2** — nộp audio: **1 file liền cả bài**, hoặc **nhiều file** (mỗi đoạn 1 file — tool "
+                        "nối theo thứ tự tên file, nên đặt 01, 02, 03...). Nhận cả mp4 tải từ Google Vids."
+                    )
+                    uploads = st.file_uploader("Audio tự thu", type=AUDIO_TYPES, accept_multiple_files=True)
+                    if st.button("🎙️ Dùng giọng tự thu", disabled=not uploads or client_err is not None,
+                                 help=client_err):
+                        script_path.write_text(edited, encoding="utf-8")
+                        upload_dir = run_dir / "voice_upload"
+                        shutil.rmtree(upload_dir, ignore_errors=True)
+                        upload_dir.mkdir(parents=True)
+                        files = []
+                        for up in sorted(uploads, key=lambda u: u.name):
+                            dest = upload_dir / up.name
+                            dest.write_bytes(up.getvalue())
+                            files.append(dest)
+                        with st.spinner("Đang nối audio, nghe lại bằng Whisper (Groq) để khớp từng câu với script..."):
+                            try:
+                                report = import_recorded_voice(edited, selection_data, run_dir, files,
+                                                               groq_client=text_client, text_client=text_client)
+                            except Exception as e:
+                                st.error(f"[LỖI] {type(e).__name__}: {e}")
+                                st.stop()
+                        st.session_state["voice_report"] = {"run": run_dir.name, **report}
+                        st.rerun()
+                    report = st.session_state.get("voice_report")
+                    if report and report["run"] == run_dir.name:
+                        st.success(
+                            f"Đã dùng giọng tự thu ({report['duration'] / 60:.1f} phút, khớp {report['coverage']:.0%} "
+                            "số từ của script) — sang tab 'Video' để ghép."
+                        )
+                        for seg in report["segments"]:
+                            line = f"- `{seg['name']}`: {seg['duration']}s — khớp {seg['coverage']:.0%}"
+                            if seg["coverage"] < 0.7:
+                                line += " ⚠️ đọc lệch script nhiều, ảnh/phụ đề đoạn này có thể lệch — nghe lại đoạn này"
+                            st.markdown(line)
 
                 if flags["media"]:
                     st.success("Đã có audio (06_media_manifest.json) — sang tab 'Video' để ghép MP4.")
                     audio_dir = run_dir / "audio"
                     if audio_dir.exists():
-                        for f in sorted(audio_dir.glob("*.mp3")):
+                        for f in sorted(p for p in audio_dir.glob("*.mp3") if not p.name.startswith("_")):
                             st.caption(f.name)
                             st.audio(str(f))
 
@@ -415,7 +472,7 @@ def _render_progress(run_dir: Path) -> None:
 
 
 with tab_video:
-    st.subheader("Giai đoạn 3 — Ghép video MP4")
+    st.subheader("Giai đoạn 3 — Xuất video MP4 / project CapCut")
     if run_dir is None:
         st.info("Chọn hoặc tạo 1 run trước.")
     else:
@@ -423,26 +480,128 @@ with tab_video:
         if not flags["media"]:
             st.warning("Run này chưa có audio (06_media_manifest.json) — làm ở tab 'Script & Audio' trước.")
         else:
-            col1, col2, col3 = st.columns(3)
-            vertical = col1.checkbox("Dọc (Shorts 1080x1920)", value=False)
-            fps = col2.number_input("FPS", min_value=15, max_value=60, value=30)
-            font_path_input = col3.text_input("Font .ttf tùy chỉnh (bỏ trống = mặc định)", "")
+            no_audio = [s.get("product_name") or s["kind"] for s in load_json(run_dir / "06_media_manifest.json") or []
+                        if not s.get("audio_file") and (s.get("text") or "").strip()]
+            if no_audio:
+                st.error(
+                    f"⚠️ {len(no_audio)} đoạn chưa có audio nên sẽ bị BỎ khỏi video/CapCut: "
+                    + "; ".join(n[:50] for n in no_audio)
+                    + " — quay lại tab 'Script & Audio' bấm sinh audio lại."
+                )
+            output = st.radio(
+                "Đầu ra", ["🎬 Video MP4", "📤 Project CapCut", "🎬 + 📤 Cả hai"], horizontal=True,
+                help="Video MP4: tool tự ghép xong là đăng được. Project CapCut: mở CapCut biên tập tiếp rồi "
+                     "Export ở đó. Cả hai: tạo project CapCut trước (vài giây) rồi ghép MP4 ở chế độ nền.",
+            )
+            want_mp4 = output != "📤 Project CapCut"
+            want_capcut = output != "🎬 Video MP4"
+
+            vertical = st.checkbox("Dọc (Shorts 1080x1920)", value=False)
+            canvas = (1080, 1920) if vertical else (1920, 1080)
+
+            if want_mp4:
+                st.markdown("**Video MP4**")
+                col2, col3 = st.columns(2)
+                fps = col2.number_input("FPS", min_value=15, max_value=60, value=30)
+                font_path_input = col3.text_input("Font .ttf tùy chỉnh (bỏ trống = mặc định)", "")
+
+            if want_capcut:
+                st.markdown("**Project CapCut**")
+                st.caption(
+                    "Tạo sẵn 1 project CapCut (ảnh/video theo từng câu, giọng đọc, phụ đề, badge TOP/giá) — "
+                    "mở CapCut là thấy, thêm hiệu ứng/chuyển cảnh rồi Export ở đó."
+                )
+                if capcut_is_running():
+                    st.warning("CapCut đang mở — nên đóng CapCut trước khi xuất để project mới hiện trong danh sách.")
+                style_names = list_styles()
+                col_name, col_style = st.columns(2)
+                capcut_name = col_name.text_input("Tên project CapCut", f"AutoVideo {run_dir.name}")
+                style_choice = col_style.selectbox(
+                    "Bộ phong cách", ["(Mặc định)"] + style_names,
+                    index=1 if style_names else 0,
+                    help="Mỗi kênh nên dùng 1 bộ phong cách riêng — tạo ở mục 'Lưu phong cách mới' bên dưới.",
+                )
+                chosen_style = load_style(style_choice) if style_choice in style_names else None
+                if chosen_style:
+                    with st.expander(f"Bộ phong cách '{style_choice}' gồm"):
+                        for line in describe_style(chosen_style):
+                            st.markdown(f"- {line}")
+                use_akp = st.checkbox(
+                    "✨ Làm đẹp bằng Auto Keyframe Pro", value=True,
+                    help="Add-on của Tool AutoCapcut V6.3: keyframe có gia tốc (ease), lớp nền mờ + Canvas Blur, "
+                         "video dọc để vừa khung. Tự backup, chạy lại không chồng lớp.",
+                )
+                akp_opts = {}
+                if use_akp:
+                    with st.expander("Tuỳ chọn Auto Keyframe Pro"):
+                        c1, c2 = st.columns(2)
+                        akp_opts["style"] = c1.selectbox(
+                            "Kiểu chuyển động", AKP_KEYFRAME_STYLES,
+                            index=AKP_KEYFRAME_STYLES.index(AKP_DEFAULTS["style"]),
+                        )
+                        akp_opts["bg_blur"] = c2.selectbox(
+                            "Độ mờ lớp nền", AKP_BLUR_LEVELS, index=AKP_BLUR_LEVELS.index(AKP_DEFAULTS["bg_blur"]),
+                        )
+                        akp_opts["zoom"] = c1.slider("Mức zoom", 1.02, 1.30, float(AKP_DEFAULTS["zoom"]), 0.01)
+                        akp_opts["bg_alpha"] = c2.slider("Độ đậm lớp nền", 0.10, 1.00, float(AKP_DEFAULTS["bg_alpha"]), 0.05)
+                        akp_opts["keyword_subs"] = st.checkbox(
+                            "Phụ đề TỪ KHOÁ thay phụ đề nguyên câu",
+                            help="Mỗi clip ảnh chỉ hiện 1 cụm từ khoá (số liệu, mã máy, danh từ chính). "
+                                 "Phụ đề gốc bị ẩn, không xoá; badge TOP/giá giữ nguyên.",
+                        )
+                        if akp_opts["keyword_subs"]:
+                            akp_opts["sub_style"] = st.selectbox("Kiểu chữ từ khoá", AKP_SUBTITLE_STYLES)
+                        c3, c4 = st.columns(2)
+                        akp_opts["letterbox"] = c3.checkbox("Khung 19:6 (letterbox)")
+                        akp_opts["vignette"] = c4.checkbox("Vignette 2 mép")
 
             status = get_status(run_dir)
             running_other = any_render_running()
             is_running = bool(status and status.get("state") == "running")
+            no_drafts_root = want_capcut and default_drafts_root() is None
+            if no_drafts_root:
+                block_reason = "Không tìm thấy thư mục draft CapCut — đặt CAPCUT_DRAFT_DIR trong .env"
+            elif want_mp4 and running_other:
+                block_reason = f"Đang ghép run `{running_other}` — đợi xong rồi ghép tiếp."
+            else:
+                block_reason = None
 
-            if st.button(
-                "🎬 Ghép video", type="primary",
-                disabled=bool(running_other),
-                help=f"Đang ghép run `{running_other}` — đợi xong rồi ghép tiếp." if running_other else None,
-            ):
-                canvas = (1080, 1920) if vertical else (1920, 1080)
-                start_render(
-                    run_dir, canvas=canvas, font_path=font_path_input or None, fps=int(fps),
-                    on_done=_log_run_to_db,
-                )
-                st.rerun()
+            if st.button("▶️ Bắt đầu", type="primary", disabled=bool(block_reason), help=block_reason):
+                if want_capcut:
+                    export_style = chosen_style
+                    if use_akp and chosen_style and chosen_style.get("background_layer", {}).get("enabled"):
+                        # AKP tự dựng lớp nền mờ — tắt lớp nền của bộ phong cách để khỏi chồng 2 lớp.
+                        export_style = {**chosen_style, "background_layer": {"enabled": False}}
+                    with st.spinner("Đang tạo project CapCut..."):
+                        try:
+                            draft_dir = export_capcut_draft(run_dir, canvas=canvas,
+                                                            draft_name=capcut_name.strip() or None, style=export_style)
+                            akp_log = []
+                            if use_akp:
+                                enhance_draft(draft_dir, akp_opts, log=akp_log.append)
+                            # giữ qua st.rerun() bên dưới (khi ghép MP4 cùng lúc)
+                            st.session_state["capcut_result"] = {"run": run_dir.name, "draft": draft_dir.name,
+                                                                 "log": akp_log}
+                        except Exception as e:
+                            st.session_state["capcut_result"] = {"run": run_dir.name,
+                                                                 "error": f"{type(e).__name__}: {e}"}
+                if want_mp4:
+                    start_render(
+                        run_dir, canvas=canvas, font_path=font_path_input or None, fps=int(fps),
+                        on_done=_log_run_to_db,
+                    )
+                    st.rerun()
+
+            capcut_result = st.session_state.get("capcut_result")
+            if capcut_result and capcut_result["run"] == run_dir.name:
+                if capcut_result.get("error"):
+                    st.error(f"[LỖI] Xuất CapCut thất bại: {capcut_result['error']}")
+                else:
+                    st.success(f"Đã tạo project CapCut **{capcut_result['draft']}** — mở CapCut, "
+                               "project nằm đầu danh sách.")
+                    if capcut_result["log"]:
+                        with st.expander("Nhật ký Auto Keyframe Pro"):
+                            st.code("\n".join(capcut_result["log"]), language=None)
 
             if is_running:
                 _render_progress(run_dir)
@@ -451,7 +610,7 @@ with tab_video:
             elif status and status.get("state") == "interrupted":
                 st.warning(
                     "Lần ghép trước bị ngắt giữa chừng (server Streamlit đã tắt/khởi động lại) — "
-                    "bấm 'Ghép video' để chạy lại."
+                    "chọn 'Video MP4' rồi bấm 'Bắt đầu' để chạy lại."
                 )
             elif status and status.get("state") == "done":
                 st.success(f"Ghép xong lúc {status.get('finished_at', '').replace('T', ' ')}.")
@@ -470,36 +629,6 @@ with tab_video:
                 )
 
             st.divider()
-            st.subheader("Hoặc xuất sang CapCut để tự biên tập")
-            st.caption(
-                "Tạo sẵn 1 project CapCut (ảnh/video theo từng câu, giọng đọc, phụ đề, badge TOP/giá) — "
-                "mở CapCut là thấy, thêm hiệu ứng/chuyển cảnh rồi Export ở đó. Không cần ghép MP4 ở trên."
-            )
-            if capcut_is_running():
-                st.warning("CapCut đang mở — nên đóng CapCut trước khi xuất để project mới hiện trong danh sách.")
-            style_names = list_styles()
-            col_name, col_style = st.columns(2)
-            capcut_name = col_name.text_input("Tên project CapCut", f"AutoVideo {run_dir.name}")
-            style_choice = col_style.selectbox(
-                "Bộ phong cách", ["(Mặc định)"] + style_names,
-                index=1 if style_names else 0,
-                help="Mỗi kênh nên dùng 1 bộ phong cách riêng — tạo ở mục 'Lưu phong cách mới' bên dưới.",
-            )
-            chosen_style = load_style(style_choice) if style_choice in style_names else None
-            if chosen_style:
-                with st.expander(f"Bộ phong cách '{style_choice}' gồm"):
-                    for line in describe_style(chosen_style):
-                        st.markdown(f"- {line}")
-            if st.button("📤 Xuất sang CapCut", disabled=default_drafts_root() is None,
-                         help=None if default_drafts_root() else "Không tìm thấy thư mục draft CapCut — đặt CAPCUT_DRAFT_DIR trong .env"):
-                canvas = (1080, 1920) if vertical else (1920, 1080)
-                with st.spinner("Đang tạo project CapCut..."):
-                    try:
-                        draft_dir = export_capcut_draft(run_dir, canvas=canvas, draft_name=capcut_name.strip() or None,
-                                                        style=chosen_style)
-                        st.success(f"Đã tạo project **{draft_dir.name}** — mở CapCut, project nằm đầu danh sách.")
-                    except Exception as e:
-                        st.error(f"[LỖI] Xuất CapCut thất bại: {type(e).__name__}: {e}")
 
             with st.expander("➕ Lưu phong cách mới từ 1 project CapCut đã chỉnh tay"):
                 st.caption(

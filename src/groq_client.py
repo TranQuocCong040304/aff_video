@@ -151,3 +151,19 @@ class GroqClient:
 
     def generate_text(self, prompt: str) -> str:
         return self._chat(prompt, json_mode=False)
+
+    def transcribe_words(self, audio_path, language: str = "vi") -> list[dict]:
+        """Whisper trên Groq: [{"word", "start", "end"}] (giây) — dùng để căn
+        giọng tự thu khớp với script (src/voice_import.py). File tối đa 25MB
+        (free tier) nên gửi bản nén mono, không gửi file gốc."""
+        model = os.environ.get("GROQ_WHISPER_MODEL", "whisper-large-v3")
+
+        def call():
+            with open(audio_path, "rb") as f:
+                return self.client.audio.transcriptions.create(
+                    file=f, model=model, language=language,
+                    response_format="verbose_json", timestamp_granularities=["word"],
+                )
+
+        data = self._call_with_retry(call).model_dump()
+        return data.get("words") or []

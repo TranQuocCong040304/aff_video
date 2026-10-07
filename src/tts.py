@@ -114,8 +114,36 @@ def _synthesize_block_with_retry(
         except Exception as e:
             last_error = e
             if attempt < retries:
-                time.sleep(retry_delay)
+                # Lỗi "No audio was received" thường là edge-tts chặn tạm vì gọi
+                # dồn dập (cùng 1 câu lúc lỗi lúc được) — chờ tăng dần cho server nguôi.
+                time.sleep(min(retry_delay * 2 ** (attempt - 1), 30.0))
     raise RuntimeError(f"edge-tts thất bại sau {retries} lần thử: {last_error}") from last_error
+
+
+def _synthesize_block_by_sentence(
+    text: str, out_path: Path, voice: str, rate: str, retries: int, retry_delay: float
+) -> List[dict]:
+    """Phương án dự phòng khi cả block bị edge-tts từ chối mãi (đã gặp: 1 block
+    lỗi liền 9 lần, trong khi từng câu của nó gọi riêng vẫn được). Mỗi câu 1
+    lệnh gọi — giọng có thể lệch nhẹ giữa các câu (xem đầu file), nhưng còn
+    hơn mất trắng cả đoạn sản phẩm trong video."""
+    parts = [p for p in re.split(r"(?<=[.!?…])\s+", text.strip()) if p.strip()]
+    clips, sentences, cursor = [], [], 0.0
+    try:
+        for i, part in enumerate(parts):
+            part_path = out_path.with_name(f"{out_path.stem}_s{i:02d}.mp3")
+            _synthesize_block_with_retry(part, part_path, voice, rate, retries, retry_delay)
+            clip = AudioFileClip(str(part_path))
+            clips.append(clip)
+            sentences.append({"text": part, "start": cursor, "end": cursor + clip.duration})
+            cursor += clip.duration
+        merged = concatenate_audioclips(clips)
+        merged.write_audiofile(str(out_path), logger=None)
+        merged.close()
+    finally:
+        for c in clips:
+            c.close()
+    return sentences
 
 
 def _sentence_index_for_char(sentences: List[dict], char_pos: int) -> int:
@@ -134,7 +162,7 @@ def synthesize_beats(
     out_path: Path,
     voice: str = DEFAULT_VOICE,
     base_rate: str = "+0%",
-    retries: int = 5,
+    retries: int = 6,
     retry_delay: float = 3.0,
     inter_block_delay: float = 0.6,
 ) -> List[dict]:
@@ -170,7 +198,11 @@ def synthesize_beats(
                 # sau 5 lần retry, vì retry cũng dồn dập không nghỉ).
                 time.sleep(inter_block_delay)
             block_idx += 1
-            sentences = _synthesize_block_with_retry(clean_text, block_path, voice, base_rate, retries, retry_delay)
+            try:
+                sentences = _synthesize_block_with_retry(clean_text, block_path, voice, base_rate, retries, retry_delay)
+            except RuntimeError as e:
+                print(f"  [CẢNH BÁO] {e} — thử sinh từng câu riêng cho block này.")
+                sentences = _synthesize_block_by_sentence(clean_text, block_path, voice, base_rate, retries, retry_delay)
 
             block_audio = AudioFileClip(str(block_path))
             block_audios.append(block_audio)

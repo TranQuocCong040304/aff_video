@@ -80,33 +80,10 @@ def run_media_step(
     }
 
     audio_dir = out_dir / "audio"
-    images_dir = out_dir / "images"
     manifest = []
 
     for seg in segments:
-        product = match_by_name(seg.product_name or "", products_by_name) if seg.kind == "product" else None
-
-        if seg.kind == "hook":
-            base_name = "00_hook"
-        elif seg.kind == "cta":
-            base_name = "99_cta"
-        else:
-            rank = product.get("rank", 50 + seg.index) if product else 50 + seg.index
-            base_name = f"{rank:02d}_{slugify(seg.product_name or 'sp')}"
-
-        # Xây danh sách block để TTS: mỗi block có thể gắn 1 ảnh cụ thể (khi có
-        # [[IMG:n]]) để video hiện ĐÚNG ảnh lúc đọc câu mô tả ảnh đó.
-        if seg.image_blocks and product:
-            real_images = list_all_product_images(product, out_dir)
-            blocks = []
-            for b in seg.image_blocks:
-                img = real_images[b["index"] - 1] if 0 < b["index"] <= len(real_images) else None
-                blocks.append({
-                    "text_with_tags": b["raw_text"],
-                    "image": _relative_or_none(img, out_dir),
-                })
-        else:
-            blocks = [{"text_with_tags": seg.raw_text, "image": None}]
+        product, base_name, blocks = plan_segment(seg, products_by_name, out_dir)
 
         audio_path = None
         beats = []
@@ -131,33 +108,68 @@ def run_media_step(
         else:
             print(f"[CẢNH BÁO] Đoạn '{base_name}' rỗng, bỏ qua TTS.")
 
-        # Ảnh thumbnail dự phòng (dùng khi 1 beat không gắn ảnh cụ thể nào, hoặc
-        # cho sản phẩm không có product_media/ — xem src/video_assembly.py).
-        image_path = None
-        if seg.kind == "product":
-            if product is None:
-                print(
-                    f"[CẢNH BÁO] Không khớp được sản phẩm cho đoạn '{seg.product_name}' — "
-                    f"kiểm tra tên trong 03_products_selected.json. Bỏ qua ảnh."
-                )
-            elif product.get("image_url"):
-                try:
-                    image_path = download_image(product["image_url"], images_dir, base_name)
-                except Exception as e:
-                    print(f"[CẢNH BÁO] Tải ảnh thất bại cho '{seg.product_name}': {e}")
+        manifest.append(manifest_entry(seg, product, base_name, audio_path, beats, out_dir))
 
-        manifest.append(
-            {
-                "order": seg.index,
-                "kind": seg.kind,
-                "product_name": seg.product_name,
-                "audio_file": _relative_or_none(audio_path, out_dir),
-                "image_file": _relative_or_none(image_path, out_dir),
-                "text": seg.clean_text,
-                "beats": beats,
-            }
-        )
+    return finish_manifest(manifest, out_dir, text_client)
 
+
+def plan_segment(seg, products_by_name: dict, out_dir: Path):
+    """(product, base_name, blocks) của 1 đoạn script. Mỗi block có thể gắn 1
+    ảnh cụ thể (khi có [[IMG:n]]) để video hiện ĐÚNG ảnh lúc đọc câu mô tả
+    ảnh đó. Dùng chung cho giọng máy và giọng tự thu (src/voice_import.py)."""
+    product = match_by_name(seg.product_name or "", products_by_name) if seg.kind == "product" else None
+
+    if seg.kind == "hook":
+        base_name = "00_hook"
+    elif seg.kind == "cta":
+        base_name = "99_cta"
+    else:
+        rank = product.get("rank", 50 + seg.index) if product else 50 + seg.index
+        base_name = f"{rank:02d}_{slugify(seg.product_name or 'sp')}"
+
+    if seg.image_blocks and product:
+        real_images = list_all_product_images(product, out_dir)
+        blocks = []
+        for b in seg.image_blocks:
+            img = real_images[b["index"] - 1] if 0 < b["index"] <= len(real_images) else None
+            blocks.append({
+                "text_with_tags": b["raw_text"],
+                "image": _relative_or_none(img, out_dir),
+            })
+    else:
+        blocks = [{"text_with_tags": seg.raw_text, "image": None}]
+    return product, base_name, blocks
+
+
+def manifest_entry(seg, product, base_name: str, audio_path, beats: list, out_dir: Path) -> dict:
+    # Ảnh thumbnail dự phòng (dùng khi 1 beat không gắn ảnh cụ thể nào, hoặc
+    # cho sản phẩm không có product_media/ — xem src/video_assembly.py).
+    image_path = None
+    if seg.kind == "product":
+        if product is None:
+            print(
+                f"[CẢNH BÁO] Không khớp được sản phẩm cho đoạn '{seg.product_name}' — "
+                f"kiểm tra tên trong 03_products_selected.json. Bỏ qua ảnh."
+            )
+        elif product.get("image_url"):
+            try:
+                image_path = download_image(product["image_url"], out_dir / "images", base_name)
+            except Exception as e:
+                print(f"[CẢNH BÁO] Tải ảnh thất bại cho '{seg.product_name}': {e}")
+
+    return {
+        "order": seg.index,
+        "kind": seg.kind,
+        "product_name": seg.product_name,
+        "audio_file": _relative_or_none(audio_path, out_dir),
+        "image_file": _relative_or_none(image_path, out_dir),
+        "text": seg.clean_text,
+        "beats": beats,
+    }
+
+
+def finish_manifest(manifest: list, out_dir: Path, text_client=None) -> list:
+    """Chữ nhấn mạnh + ghi 06_media_manifest.json + mô tả YouTube."""
     if text_client is not None:
         flat_beats = [b for seg in manifest for b in seg["beats"]]
         if flat_beats:
@@ -175,5 +187,15 @@ def run_media_step(
     description = build_youtube_description(out_dir)
     if description:
         (out_dir / "08_youtube_description.txt").write_text(description, encoding="utf-8")
+
+    # Đoạn thiếu audio bị video/CapCut bỏ qua hẳn (mất cả Top 1) — báo to
+    # thay vì chỉ in cảnh báo ra terminal rồi coi như xong.
+    missing = [seg["product_name"] or seg["kind"] for seg in manifest
+               if seg["audio_file"] is None and (seg["text"] or "").strip()]
+    if missing:
+        raise RuntimeError(
+            f"Không sinh được audio cho {len(missing)} đoạn: {'; '.join(m[:50] for m in missing)}. "
+            "Video sẽ THIẾU các đoạn này — đợi vài phút (edge-tts đang chặn tạm) rồi bấm sinh audio lại."
+        )
 
     return manifest
